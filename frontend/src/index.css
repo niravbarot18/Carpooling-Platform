@@ -1,0 +1,139 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --color-primary: #10b981; /* Emerald-500 */
+  --color-primary-dark: #047857; /* Emerald-700 */
+  --color-secondary: #3b82f6; /* Blue-500 */
+  --color-secondary-dark: #1d4ed8; /* Blue-700 */
+  --color-app-bg: #f9fafb; /* Very Light Gray */
+  --color-card-bg: #ffffff; /* White */
+  --radius-lg: 12px;
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+}
+
+/* Custom Base resets and utility styles */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--color-app-bg);
+    color: #1f2937;
+    font-family: var(--font-sans);
+  }
+}
+
+/* Premium Card, Input, Button, Layout Utilities */
+.premium-card {
+  background-color: var(--color-card-bg);
+  border: 1px solid #f3f4f6; /* Gray-100 */
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.premium-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+.premium-btn-primary {
+  height: 44px;
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  padding-left: 20px;
+  padding-right: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border: none;
+  font-size: 14px;
+}
+
+.premium-btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.premium-btn-secondary {
+  height: 44px;
+  background-color: transparent;
+  color: #374151; /* Gray-700 */
+  border: 1px solid #d1d5db; /* Gray-300 */
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  padding-left: 20px;
+  padding-right: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  font-size: 14px;
+}
+
+.premium-btn-secondary:hover {
+  background-color: #f3f4f6; /* Gray-100 */
+  border-color: #9ca3af;
+}
+
+.premium-input {
+  height: 44px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #d1d5db;
+  padding-left: 16px;
+  padding-right: 16px;
+  font-size: 14px;
+  background-color: white;
+  width: 100%;
+  outline: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.premium-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Leaflet map styles to fit properly */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-lg);
+  z-index: 10;
+}
