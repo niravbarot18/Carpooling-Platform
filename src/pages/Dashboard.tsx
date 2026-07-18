@@ -5,7 +5,7 @@ import api from '../services/api';
 import {
   Wallet,
   Leaf,
-  DollarSign,
+  IndianRupee,
   Compass,
   ArrowRight,
   PlusCircle,
@@ -48,6 +48,11 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Fuel & Operational Cost parameters
+  const [fuelEfficiency, setFuelEfficiency] = useState(15.0);
+  const [fuelPrice, setFuelPrice] = useState(103.50);
+  const [totalTripsCount, setTotalTripsCount] = useState(0);
+
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
@@ -66,6 +71,21 @@ export const Dashboard: React.FC = () => {
         const analyticsRes = await api.get('/analytics/');
         setLeaderboard(analyticsRes.data.leaderboard || []);
         setChartData(analyticsRes.data.monthly_trips || []);
+
+        // Load Passenger Bookings count
+        const bookingsRes = await api.get('/book/', { params: { role_type: 'passenger' } });
+        const list = bookingsRes.data.results || bookingsRes.data;
+        const completedTrips = list.filter((b: any) => b.ride_details.status === 'completed' && b.status === 'approved');
+        setTotalTripsCount(completedTrips.length);
+
+        // Load System Configurations
+        try {
+          const configRes = await api.get('/system-config/');
+          setFuelEfficiency(configRes.data.default_fuel_efficiency || 15.0);
+          setFuelPrice(configRes.data.fuel_price || 103.50);
+        } catch (configErr) {
+          console.error("Failed to load system config:", configErr);
+        }
       } catch (err) {
         console.error("Error loading dashboard data:", err);
       } finally {
@@ -91,6 +111,11 @@ export const Dashboard: React.FC = () => {
   const co2 = user ? parseFloat(user.co2_saved) : 0.0;
   const money = user ? parseFloat(user.money_saved) : 0.0;
 
+  // Cost analysis metrics
+  const totalFuelConsumed = fuelEfficiency > 0 ? (distance / fuelEfficiency) : 0.0;
+  const totalFuelCost = totalFuelConsumed * fuelPrice;
+  const costPerKm = distance > 0 ? (totalFuelCost / distance) : 0.0;
+
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto">
       {/* Welcome Banner */}
@@ -101,23 +126,72 @@ export const Dashboard: React.FC = () => {
             Here is your commute statistics summary for today.
           </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <Link
-            to="/find-ride"
-            className="flex items-center space-x-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2.5 rounded-xl font-semibold transition-all shadow-md shadow-primary/25 text-sm"
-          >
-            <MapPin size={16} />
-            <span>Find a Ride</span>
-          </Link>
-          <Link
-            to="/offer-ride"
-            className="flex items-center space-x-2 bg-card border border-border hover:bg-muted/40 px-4 py-2.5 rounded-xl font-semibold transition-all text-sm"
-          >
-            <PlusCircle size={16} />
-            <span>Offer a Ride</span>
-          </Link>
-        </div>
+        {user?.role !== 'admin' && (
+          <div className="flex items-center space-x-3">
+            <Link
+              to="/find-ride"
+              className="flex items-center space-x-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2.5 rounded-xl font-semibold transition-all shadow-md shadow-primary/25 text-sm"
+            >
+              <MapPin size={16} />
+              <span>Find a Ride</span>
+            </Link>
+            <Link
+              to="/offer-ride"
+              className="flex items-center space-x-2 bg-card border border-border hover:bg-muted/40 px-4 py-2.5 rounded-xl font-semibold transition-all text-sm"
+            >
+              <PlusCircle size={16} />
+              <span>Offer a Ride</span>
+            </Link>
+          </div>
+        )}
       </div>
+
+      {/* Cost Analysis & Fuel Efficiency Panel */}
+      {user?.role !== 'admin' && (
+        <div className="bg-card border border-border rounded-2xl p-6 space-y-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-sm tracking-tight text-foreground">Travel Cost & Fuel Efficiency Analysis</h3>
+              <p className="text-[10px] text-muted-foreground">Detailed breakdown of shared trip mileage, operational fuel costs, and efficiency</p>
+            </div>
+            <div className="px-3 py-1 bg-primary/10 text-primary font-extrabold text-[10px] rounded-lg self-start">
+              Parameters: {fuelEfficiency.toFixed(1)} km/L • ₹{fuelPrice.toFixed(2)}/L
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="bg-muted/30 border border-border/40 p-4 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Commutes</span>
+              <h4 className="text-xl font-black text-foreground">{totalTripsCount} Trips</h4>
+              <p className="text-[9px] text-muted-foreground leading-none">Completed passenger pools</p>
+            </div>
+
+            <div className="bg-muted/30 border border-border/40 p-4 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Distance Travelled</span>
+              <h4 className="text-xl font-black text-foreground">{distance.toFixed(1)} km</h4>
+              <p className="text-[9px] text-muted-foreground leading-none">Shared carpool distance</p>
+            </div>
+
+            <div className="bg-muted/30 border border-border/40 p-4 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Estimated Fuel Spent</span>
+              <h4 className="text-xl font-black text-rose-600 dark:text-rose-400">₹{totalFuelCost.toFixed(2)}</h4>
+              <p className="text-[9px] text-muted-foreground leading-none">Based on shared distance</p>
+            </div>
+
+            <div className="bg-muted/30 border border-border/40 p-4 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cost per Kilometer</span>
+              <h4 className="text-xl font-black text-emerald-600 dark:text-emerald-400">₹{costPerKm.toFixed(2)}/km</h4>
+              <p className="text-[9px] text-muted-foreground leading-none">Operational efficiency rate</p>
+            </div>
+
+            <div className="bg-muted/30 border border-border/40 p-4 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Fuel Efficiency</span>
+              <h4 className="text-xl font-black text-indigo-600 dark:text-indigo-400">{fuelEfficiency.toFixed(1)} km/L</h4>
+              <p className="text-[9px] text-muted-foreground leading-none">Average commuter vehicle</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Glow Active Trip Panel if exists */}
       {activeTrips.length > 0 && (
@@ -150,11 +224,13 @@ export const Dashboard: React.FC = () => {
         <div className="bg-card border border-border rounded-2xl p-6 flex items-start justify-between relative overflow-hidden group hover:border-primary/20 transition-all">
           <div className="space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Wallet Balance</p>
-            <h3 className="text-2xl font-bold tracking-tight">${Number(walletBalance).toFixed(2)}</h3>
-            <Link to="/wallet" className="text-xs text-primary font-semibold hover:underline flex items-center space-x-1 pt-2">
-              <span>Recharge wallet</span>
-              <ArrowRight size={12} />
-            </Link>
+            <h3 className="text-2xl font-bold tracking-tight">₹{Number(walletBalance).toFixed(2)}</h3>
+            {user?.role !== 'admin' && (
+              <Link to="/wallet" className="text-xs text-primary font-semibold hover:underline flex items-center space-x-1 pt-2">
+                <span>Recharge wallet</span>
+                <ArrowRight size={12} />
+              </Link>
+            )}
           </div>
           <div className="p-3 bg-primary/10 text-primary rounded-xl">
             <Wallet size={20} />
@@ -180,14 +256,14 @@ export const Dashboard: React.FC = () => {
         <div className="bg-card border border-border rounded-2xl p-6 flex items-start justify-between relative overflow-hidden group hover:border-indigo-500/20 transition-all">
           <div className="space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Money Saved</p>
-            <h3 className="text-2xl font-bold tracking-tight">${money.toFixed(2)}</h3>
+            <h3 className="text-2xl font-bold tracking-tight">₹{money.toFixed(2)}</h3>
             <span className="text-[10px] text-indigo-500 font-semibold flex items-center space-x-1 pt-3">
               <CheckCircle size={12} />
               <span>Fuel & commute savings</span>
             </span>
           </div>
           <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl">
-            <DollarSign size={20} />
+            <IndianRupee size={20} />
           </div>
         </div>
 

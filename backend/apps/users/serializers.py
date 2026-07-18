@@ -12,50 +12,29 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    organization_details = OrganizationSerializer(source='organization', read_only=True)
-
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 
-            'phone_number', 'role', 'organization', 'organization_details', 
+            'phone_number', 'role', 
             'emergency_contact_name', 'emergency_contact_phone', 
-            'co2_saved', 'money_saved', 'total_distance', 'is_verified'
+            'co2_saved', 'money_saved', 'total_distance', 'is_verified',
+            'reporting_manager', 'department', 'office_seat_desk'
         ]
         read_only_fields = ['co2_saved', 'money_saved', 'total_distance', 'is_verified']
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    organization_name = serializers.CharField(write_only=True, required=False)
-    organization = serializers.PrimaryKeyRelatedField(
-        queryset=Organization.objects.all(),
-        required=False,
-        allow_null=True
-    )
 
     class Meta:
         model = User
         fields = [
             'username', 'password', 'email', 'first_name', 'last_name', 
-            'phone_number', 'role', 'organization', 'organization_name'
+            'phone_number', 'role'
         ]
 
     def create(self, validated_data):
-        organization_name = validated_data.pop('organization_name', None)
-        organization = validated_data.get('organization', None)
-        
-        # If organization name is provided, find or create it
-        if organization_name and not organization:
-            domain = validated_data.get('email', '').split('@')[-1]
-            if not domain:
-                domain = f"{organization_name.lower().replace(' ', '')}.com"
-            organization, _ = Organization.objects.get_or_create(
-                name=organization_name,
-                defaults={'domain': domain}
-            )
-            validated_data['organization'] = organization
-
         # Create user
         user = User.objects.create_user(
             username=validated_data['username'],
@@ -64,8 +43,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             phone_number=validated_data.get('phone_number', ''),
-            role=validated_data.get('role', 'employee'),
-            organization=validated_data.get('organization')
+            role=validated_data.get('role', 'user')
         )
         return user
 
@@ -76,7 +54,8 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'first_name', 'last_name', 'phone_number', 
             'emergency_contact_name', 'emergency_contact_phone', 
-            'profile_picture'
+            'profile_picture',
+            'reporting_manager', 'department', 'office_seat_desk'
         ]
 
 

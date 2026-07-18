@@ -6,11 +6,20 @@ from apps.rides.serializers import RideSerializer
 class BookingSerializer(serializers.ModelSerializer):
     passenger_details = UserSerializer(source='passenger', read_only=True)
     ride_details = RideSerializer(source='ride', read_only=True)
+    payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
-        fields = '__all__'
+        fields = [
+            'id', 'ride', 'passenger', 'seats_booked', 'pickup_location',
+            'destination_location', 'status', 'created_at',
+            'passenger_details', 'ride_details', 'payment_status'
+        ]
         read_only_fields = ['passenger']
+
+    def get_payment_status(self, obj):
+        payment = obj.payments.first()
+        return payment.payment_status if payment else 'no_payment'
 
     def create(self, validated_data):
         validated_data['passenger'] = self.context['request'].user

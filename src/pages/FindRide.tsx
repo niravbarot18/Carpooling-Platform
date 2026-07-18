@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { MapPin, Calendar, Users, Search, AlertCircle, Sparkles, Star, ShieldCheck, CheckCircle } from 'lucide-react';
+import { MapPin, Calendar, Users, Search, AlertCircle, Sparkles, Star, ShieldCheck, CheckCircle, RefreshCw } from 'lucide-react';
 
 interface Ride {
   id: number;
@@ -14,6 +14,8 @@ interface Ride {
   travel_time: string;
   available_seats: number;
   fare_per_seat: string;
+  recurring?: boolean;
+  recurring_pattern?: string;
 }
 
 export const FindRide: React.FC = () => {
@@ -22,6 +24,7 @@ export const FindRide: React.FC = () => {
   const [destination, setDestination] = useState('');
   const [date, setDate] = useState('');
   const [seats, setSeats] = useState('1');
+  const [rideType, setRideType] = useState<'all' | 'one_time' | 'recurring'>('all');
 
   const [rides, setRides] = useState<Ride[]>([]);
   const [walletBalance, setWalletBalance] = useState('0.00');
@@ -33,6 +36,16 @@ export const FindRide: React.FC = () => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const filteredRides = rides.filter((ride) => {
+    if (rideType === 'one_time') {
+      return !ride.recurring;
+    }
+    if (rideType === 'recurring') {
+      return !!ride.recurring;
+    }
+    return true;
+  });
 
   useEffect(() => {
     // Load current wallet balance
@@ -77,7 +90,7 @@ export const FindRide: React.FC = () => {
 
     const totalFare = Number(seats) * parseFloat(selectedRide.fare_per_seat);
     if (parseFloat(walletBalance) < totalFare) {
-      setError(`Insufficient wallet balance. You need $${totalFare.toFixed(2)} but only have $${Number(walletBalance).toFixed(2)}.`);
+      setError(`Insufficient wallet balance. You need ₹${totalFare.toFixed(2)} but only have ₹${Number(walletBalance).toFixed(2)}.`);
       setBookingLoading(false);
       return;
     }
@@ -125,7 +138,7 @@ export const FindRide: React.FC = () => {
 
       {/* SEARCH CARD */}
       <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center space-x-1">
               <MapPin size={12} className="text-primary" />
@@ -165,6 +178,22 @@ export const FindRide: React.FC = () => {
               onChange={(e) => setDate(e.target.value)}
               className="w-full bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center space-x-1">
+              <RefreshCw size={12} className="text-primary" />
+              <span>Ride Type</span>
+            </label>
+            <select
+              value={rideType}
+              onChange={(e) => setRideType(e.target.value as any)}
+              className="w-full bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+            >
+              <option value="all">All Rides</option>
+              <option value="one_time">One-Time Only</option>
+              <option value="recurring">Recurring Only</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -207,7 +236,7 @@ export const FindRide: React.FC = () => {
         {/* LISP OF RIDES */}
         <div className="lg:col-span-2 space-y-4">
           <h3 className="font-bold text-base border-b border-border pb-2">
-            {searched ? `Found ${rides.length} Matching Rides` : 'Available Ride Offers'}
+            {searched ? `Found ${filteredRides.length} Matching Rides` : 'Available Ride Offers'}
           </h3>
 
           {error && (
@@ -217,13 +246,13 @@ export const FindRide: React.FC = () => {
             </div>
           )}
 
-          {rides.length === 0 ? (
+          {filteredRides.length === 0 ? (
             <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm">
               {searched ? "No matching carpool routes found. Try adjusting locations or dates." : "Enter route search details above to match with drivers."}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {rides.map((ride) => (
+              {filteredRides.map((ride) => (
                 <div
                   key={ride.id}
                   className={`bg-card border rounded-2xl p-5 hover-glow flex flex-col justify-between ${
@@ -246,7 +275,7 @@ export const FindRide: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full">
-                        ${parseFloat(ride.fare_per_seat).toFixed(2)}/seat
+                        ₹{parseFloat(ride.fare_per_seat).toFixed(2)}/seat
                       </span>
                     </div>
 
@@ -271,7 +300,9 @@ export const FindRide: React.FC = () => {
 
                   <div className="pt-4 flex items-center justify-between mt-auto">
                     <span className="text-[10px] text-muted-foreground">
-                      {ride.travel_date} • {ride.travel_time.slice(0, 5)}
+                      {ride.recurring && ride.recurring_pattern
+                        ? `Recurring: ${ride.recurring_pattern}`
+                        : ride.travel_date} • {ride.travel_time.slice(0, 5)}
                     </span>
                     <button
                       onClick={() => {
@@ -320,12 +351,12 @@ export const FindRide: React.FC = () => {
                 </div>
                 <div className="flex justify-between border-b border-border pb-1.5">
                   <span className="text-muted-foreground">Fare Per Seat:</span>
-                  <span className="font-semibold">${parseFloat(selectedRide.fare_per_seat).toFixed(2)}</span>
+                  <span className="font-semibold">₹{parseFloat(selectedRide.fare_per_seat).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-1.5">
                   <span className="text-muted-foreground font-semibold text-foreground">Total Commute Cost:</span>
                   <span className="font-bold text-sm text-primary">
-                    ${(Number(seats) * parseFloat(selectedRide.fare_per_seat)).toFixed(2)}
+                    ₹{(Number(seats) * parseFloat(selectedRide.fare_per_seat)).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -334,7 +365,7 @@ export const FindRide: React.FC = () => {
               <div className="bg-muted/30 rounded-xl p-3 border border-border space-y-1.5 text-xs">
                 <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>Your Wallet Balance:</span>
-                  <span className="font-bold">${parseFloat(walletBalance).toFixed(2)}</span>
+                  <span className="font-bold">₹{parseFloat(walletBalance).toFixed(2)}</span>
                 </div>
                 <div className="flex items-center space-x-1.5 text-[10px] text-primary">
                   <ShieldCheck size={12} />

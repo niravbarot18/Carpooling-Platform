@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { User, Phone, ShieldCheck, MapPin, Plus, Trash2, AlertCircle } from 'lucide-react';
@@ -13,6 +14,8 @@ interface SavedPlace {
 
 export const Profile: React.FC = () => {
   const { user, refreshProfile } = useAuth();
+  const location = useLocation();
+  const savedPlacesRef = useRef<HTMLDivElement>(null);
   
   // Profile edit states
   const [firstName, setFirstName] = useState(user?.first_name || '');
@@ -45,6 +48,14 @@ export const Profile: React.FC = () => {
   useEffect(() => {
     loadSavedPlaces();
   }, []);
+
+  useEffect(() => {
+    if (location.state && (location.state as any).scroll === 'saved-places') {
+      setTimeout(() => {
+        savedPlacesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    }
+  }, [location.state]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,7 +245,7 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* SAVED PLACES CONTAINER */}
-        <div className="bg-card border border-border rounded-2xl p-6 flex flex-col space-y-6">
+        <div ref={savedPlacesRef} className="bg-card border border-border rounded-2xl p-6 flex flex-col space-y-6">
           <h3 className="font-bold text-sm border-b border-border pb-2 flex items-center space-x-2">
             <MapPin size={16} className="text-primary" />
             <span>Saved Places</span>

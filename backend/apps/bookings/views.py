@@ -55,36 +55,24 @@ class BookingViewSet(viewsets.ModelViewSet):
             booking.status = 'approved'
             booking.save()
 
-            # 3. Deduct fare from passenger's wallet
-            passenger_wallet.balance -= total_fare
-            passenger_wallet.save()
-
-            # 4. Create wallet transaction log
-            WalletTransaction.objects.create(
-                wallet=passenger_wallet,
-                amount=-total_fare,
-                transaction_type='ride_payment',
-                reference_id=f"BOOK-{booking.id}"
-            )
-
-            # 5. Create Payment record
+            # 3. Create Payment record with status 'pending' (no wallet debit yet)
             Payment.objects.create(
                 booking=booking,
                 amount=total_fare,
                 payment_method='wallet',
-                payment_status='completed'
+                payment_status='pending'
             )
 
-            # 6. Notify passenger
+            # 4. Notify passenger
             Notification.objects.create(
                 recipient=booking.passenger,
                 title="Booking Approved!",
-                message=f"Your booking for the ride from {ride.pickup_location} to {ride.destination_location} has been approved. Fare of {total_fare} has been deducted from your wallet.",
+                message=f"Your booking for the ride from {ride.pickup_location} to {ride.destination_location} has been approved. A pending payment of {total_fare} has been authorized and will be charged upon completion.",
                 notification_type="booking_approved"
             )
 
         return Response({
-            "message": "Booking approved and payment completed successfully.",
+            "message": "Booking approved. Payment is pending ride completion.",
             "booking": BookingSerializer(booking).data
         })
 
@@ -127,28 +115,31 @@ class BookingViewSet(viewsets.ModelViewSet):
             return Response({"error": "Booking is already cancelled or rejected."}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            # If it was already approved, refund the passenger and restore seats
+            # If it was already approved, handle refund (if paid) and restore seats
             if booking.status == 'approved':
                 ride = booking.ride
                 ride.available_seats += booking.seats_booked
                 ride.save()
 
                 total_fare = booking.seats_booked * ride.fare_per_seat
-                passenger_wallet = Wallet.objects.get(user=booking.passenger)
-                passenger_wallet.balance += total_fare
-                passenger_wallet.save()
-
-                WalletTransaction.objects.create(
-                    wallet=passenger_wallet,
-                    amount=total_fare,
-                    transaction_type='refund',
-                    reference_id=f"REFUND-{booking.id}"
-                )
-
-                # Update payment status
-                payment = Payment.objects.filter(booking=booking, payment_status='completed').first()
+                payment = Payment.objects.filter(booking=booking).first()
+                
                 if payment:
-                    payment.payment_status = 'refunded'
+                    if payment.payment_status == 'completed':
+                        passenger_wallet = Wallet.objects.get(user=booking.passenger)
+                        passenger_wallet.balance += total_fare
+                        passenger_wallet.save()
+
+                        WalletTransaction.objects.create(
+                            wallet=passenger_wallet,
+                            amount=total_fare,
+                            transaction_type='refund',
+                            reference_id=f"REFUND-{booking.id}"
+                        )
+                        payment.payment_status = 'refunded'
+                    else:
+                        # For pending, simply cancel/fail the payment
+                        payment.payment_status = 'failed'
                     payment.save()
 
             booking.status = 'cancelled'
@@ -168,5 +159,77 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         return Response({
             "message": "Booking cancelled and refunded successfully.",
+            "booking": BookingSerializer(booking).data
+        })
+
+    @action(detail=True, methods=['post'], url_path='pay')
+    def pay(self, request, pk=None):
+        booking = self.get_object()
+        ride = booking.ride
+
+        if booking.passenger != request.user:
+            return Response({"error": "Only the passenger of this booking can make payment."}, status=status.HTTP_403_FORBIDDEN)
+
+        if booking.status != 'approved':
+            return Response({"error": "Payments can only be made for approved bookings."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Retrieve associated payment record
+        payment = Payment.objects.filter(booking=booking).first()
+        if not payment:
+            return Response({"error": "No payment record found for this booking."}, status=status.HTTP_404_NOT_FOUND)
+
+        if payment.payment_status == 'completed':
+            return Response({"error": "Payment has already been completed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if payment.payment_status != 'pending':
+            return Response({"error": f"Cannot complete payment with current status: {payment.payment_status}."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Process wallet payment transfer
+        total_fare = payment.amount
+        passenger_wallet, _ = Wallet.objects.get_or_create(user=booking.passenger)
+
+        if passenger_wallet.balance < total_fare:
+            return Response({"error": "Insufficient wallet balance. Please recharge your wallet first."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            # 1. Deduct from passenger wallet
+            passenger_wallet.balance -= total_fare
+            passenger_wallet.save()
+
+            # 2. Log passenger Wallet Transaction
+            WalletTransaction.objects.create(
+                wallet=passenger_wallet,
+                amount=-total_fare,
+                transaction_type='ride_payment',
+                reference_id=f"BOOK-{booking.id}"
+            )
+
+            # 3. Credit to driver wallet
+            driver_wallet, _ = Wallet.objects.get_or_create(user=ride.driver)
+            driver_wallet.balance += total_fare
+            driver_wallet.save()
+
+            # 4. Log driver Wallet Transaction
+            WalletTransaction.objects.create(
+                wallet=driver_wallet,
+                amount=total_fare,
+                transaction_type='ride_earning',
+                reference_id=f"TRIP-EARN-{booking.id}"
+            )
+
+            # 5. Set payment status as completed
+            payment.payment_status = 'completed'
+            payment.save()
+
+            # 6. Notify driver of earnings
+            Notification.objects.create(
+                recipient=ride.driver,
+                title="Early Ride Payment Received!",
+                message=f"Passenger {booking.passenger.username} paid ₹{total_fare} early for the ride from {ride.pickup_location}.",
+                notification_type="payment_received"
+            )
+
+        return Response({
+            "message": "Payment completed successfully.",
             "booking": BookingSerializer(booking).data
         })

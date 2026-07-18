@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { MapContainer, TileLayer, Marker, useMapEvents, Polyline } from 'react-leaflet';
 import L from 'leaflet';
-import { Car, Clock, Calendar, Users, DollarSign, MapPin, AlertCircle, HelpCircle } from 'lucide-react';
+import { Car, Clock, Calendar, Users, IndianRupee, MapPin, AlertCircle, HelpCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 interface Vehicle {
@@ -43,6 +43,9 @@ export const OfferRide: React.FC = () => {
   const [travelTime, setTravelTime] = useState('');
   const [seats, setSeats] = useState('3');
   const [fare, setFare] = useState('5.00');
+
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringPattern, setRecurringPattern] = useState('daily');
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,6 +122,8 @@ export const OfferRide: React.FC = () => {
       travel_time: travelTime,
       available_seats: Number(seats),
       fare_per_seat: Number(fare),
+      recurring: isRecurring,
+      recurring_pattern: isRecurring ? recurringPattern : '',
     };
 
     try {
@@ -274,8 +279,8 @@ export const OfferRide: React.FC = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center space-x-1">
-                    <DollarSign size={14} />
-                    <span>Fare Per Seat ($)</span>
+                    <IndianRupee size={14} />
+                    <span>Fare Per Seat (₹)</span>
                   </label>
                   <input
                     type="number"
@@ -289,10 +294,43 @@ export const OfferRide: React.FC = () => {
                 </div>
               </div>
 
+              {/* Recurring Ride Section */}
+              <div className="space-y-3 p-4 bg-muted/20 border border-border rounded-xl">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="recurring"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0"
+                  />
+                  <label htmlFor="recurring" className="text-sm font-semibold cursor-pointer">
+                    Is this a Recurring Ride?
+                  </label>
+                </div>
+                
+                {isRecurring && (
+                  <div className="space-y-1.5 animate-fade-in">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Select Frequency
+                    </label>
+                    <select
+                      value={recurringPattern}
+                      onChange={(e) => setRecurringPattern(e.target.value)}
+                      className="w-full bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="weekdays">Weekdays (Mon - Fri)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl transition-all shadow-md shadow-primary/20 hover:shadow-primary/30 flex items-center justify-center space-x-2"
+                className="w-full py-3 px-4 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl transition-all shadow-md shadow-primary/25 hover:shadow-primary/30 flex items-center justify-center space-x-2 mt-6"
               >
                 {loading ? (
                   <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></span>

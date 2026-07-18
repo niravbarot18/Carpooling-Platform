@@ -5,10 +5,10 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AppLayout } from './layouts/AppLayout';
 
-// Pages imports
 import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Dashboard } from './pages/Dashboard';
 import { FindRide } from './pages/FindRide';
 import { OfferRide } from './pages/OfferRide';
@@ -17,6 +17,7 @@ import { TripTracking } from './pages/TripTracking';
 import { Wallet } from './pages/Wallet';
 import { Vehicles } from './pages/Vehicles';
 import { Profile } from './pages/Profile';
+import { Settings } from './pages/Settings';
 import { AdminDashboard } from './pages/AdminDashboard';
 
 // Route guard for authenticated users
@@ -32,6 +33,24 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   return isAuthenticated ? <AppLayout>{children}</AppLayout> : <Navigate to="/login" replace />;
+};
+
+// Route guard for regular users only
+const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role === 'admin') return <Navigate to="/admin" replace />;
+
+  return <AppLayout>{children}</AppLayout>;
 };
 
 // Route guard for admin users only
@@ -63,8 +82,9 @@ const App: React.FC = () => {
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
-              {/* Protected employee routes */}
+              {/* Protected dashboard route (both admin and user) */}
               <Route
                 path="/dashboard"
                 element={
@@ -73,60 +93,70 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              
+              {/* Protected user routes */}
               <Route
                 path="/find-ride"
                 element={
-                  <ProtectedRoute>
+                  <UserRoute>
                     <FindRide />
-                  </ProtectedRoute>
+                  </UserRoute>
                 }
               />
               <Route
                 path="/offer-ride"
                 element={
-                  <ProtectedRoute>
+                  <UserRoute>
                     <OfferRide />
-                  </ProtectedRoute>
+                  </UserRoute>
                 }
               />
               <Route
                 path="/my-trips"
                 element={
-                  <ProtectedRoute>
+                  <UserRoute>
                     <MyTrips />
-                  </ProtectedRoute>
+                  </UserRoute>
                 }
               />
               <Route
                 path="/tracking/:tripId"
                 element={
-                  <ProtectedRoute>
+                  <UserRoute>
                     <TripTracking />
-                  </ProtectedRoute>
+                  </UserRoute>
                 }
               />
               <Route
                 path="/wallet"
                 element={
-                  <ProtectedRoute>
+                  <UserRoute>
                     <Wallet />
-                  </ProtectedRoute>
+                  </UserRoute>
                 }
               />
               <Route
                 path="/vehicles"
                 element={
-                  <ProtectedRoute>
+                  <UserRoute>
                     <Vehicles />
-                  </ProtectedRoute>
+                  </UserRoute>
                 }
               />
               <Route
                 path="/profile"
                 element={
-                  <ProtectedRoute>
+                  <UserRoute>
                     <Profile />
-                  </ProtectedRoute>
+                  </UserRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <UserRoute>
+                    <Settings />
+                  </UserRoute>
                 }
               />
 

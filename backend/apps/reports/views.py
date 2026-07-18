@@ -16,26 +16,25 @@ class ReportsView(APIView):
         user = request.user
         
         # If user is a Company Admin, return organization-wide metrics
-        if user.role == 'admin' and user.organization:
-            org = user.organization
-            employees = User.objects.filter(organization=org)
+        if user.role == 'admin':
+            employees = User.objects.filter(role='user')
             employee_ids = employees.values_list('id', flat=True)
 
             total_employees = employees.count()
             total_vehicles = Vehicle.objects.filter(owner__in=employees).count()
             
-            # Sum up stats across all employees in the org
+            # Sum up stats across all users
             total_co2 = employees.aggregate(Sum('co2_saved'))['co2_saved__sum'] or 0.0
             total_money = employees.aggregate(Sum('money_saved'))['money_saved__sum'] or 0.0
             total_dist = employees.aggregate(Sum('total_distance'))['total_distance__sum'] or 0.0
 
-            # Count of rides offered by employees of this org
+            # Count of rides offered by users
             total_rides_offered = Ride.objects.filter(driver__in=employees).count()
             total_rides_completed = Ride.objects.filter(driver__in=employees, status='completed').count()
 
             return Response({
                 "scope": "organization",
-                "organization_name": org.name,
+                "organization_name": "System-wide",
                 "metrics": {
                     "total_employees": total_employees,
                     "total_vehicles": total_vehicles,

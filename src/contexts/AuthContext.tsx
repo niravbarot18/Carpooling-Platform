@@ -8,7 +8,7 @@ interface User {
   first_name: string;
   last_name: string;
   phone_number: string;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'user';
   organization: number | null;
   organization_details: { id: number; name: string; domain: string } | null;
   emergency_contact_name: string;
@@ -17,6 +17,9 @@ interface User {
   money_saved: string;
   total_distance: string;
   is_verified: boolean;
+  reporting_manager: string;
+  department: string;
+  office_seat_desk: string;
 }
 
 interface AuthContextType {
@@ -24,6 +27,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  loginWithGoogle: (email: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
 }
@@ -75,6 +79,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async (email: string, firstName: string, lastName: string) => {
+    setIsLoading(true);
+    try {
+      const response = await api.post('/google-login/', { email, first_name: firstName, last_name: lastName });
+      localStorage.setItem('access_token', response.data.access);
+      localStorage.setItem('refresh_token', response.data.refresh);
+      await fetchProfile();
+    } catch (error) {
+      setIsAuthenticated(false);
+      setUser(null);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -96,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         isLoading,
         login,
+        loginWithGoogle,
         logout,
         refreshProfile,
       }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,7 +18,8 @@ import {
   Bell,
   ShieldCheck,
   CheckCircle2,
-  Clock
+  Clock,
+  Settings
 } from 'lucide-react';
 
 interface Notification {
@@ -39,19 +40,62 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const navigate = useNavigate();
   const location = useLocation();
 
+  const notifiedIdsRef = useRef<Set<number>>(new Set());
+
+  // Request browser notification permission
   useEffect(() => {
-    const fetchNotifications = async () => {
+    if (user && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().catch((err) => {
+          console.error("Error requesting notification permission:", err);
+        });
+      }
+    }
+  }, [user]);
+
+  const showNativeNotification = (title: string, message: string) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, {
+          body: message,
+          icon: '/favicon.svg',
+        });
+      } catch (err) {
+        console.error("Error displaying native notification:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const fetchNotifications = async (isFirstLoad = false) => {
       try {
         const res = await api.get('/notifications/');
-        setNotifications(res.data.results || res.data);
+        const fetchedNotifications: Notification[] = res.data.results || res.data;
+
+        if (isFirstLoad) {
+          // On first load, record existing IDs so we don't trigger alerts for past notifications
+          const ids = fetchedNotifications.map(n => n.id);
+          notifiedIdsRef.current = new Set(ids);
+        } else {
+          // Check for new unread notifications
+          fetchedNotifications.forEach(n => {
+            if (!n.is_read && !notifiedIdsRef.current.has(n.id)) {
+              showNativeNotification(n.title, n.message);
+              notifiedIdsRef.current.add(n.id);
+            }
+          });
+        }
+
+        setNotifications(fetchedNotifications);
       } catch (err) {
         console.error("Error loading notifications:", err);
       }
     };
+
     if (user) {
-      fetchNotifications();
-      // Poll notifications every 30 seconds
-      const timer = setInterval(fetchNotifications, 30000);
+      fetchNotifications(true);
+      // Poll notifications every 10 seconds for real-time feel
+      const timer = setInterval(() => fetchNotifications(false), 10000);
       return () => clearInterval(timer);
     }
   }, [user]);
@@ -67,20 +111,21 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   };
 
-  const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Find a Ride', path: '/find-ride', icon: MapPin },
-    { label: 'Offer a Ride', path: '/offer-ride', icon: PlusCircle },
-    { label: 'My Trips', path: '/my-trips', icon: Clock },
-    { label: 'Wallet', path: '/wallet', icon: Wallet },
-    { label: 'Vehicles', path: '/vehicles', icon: Car },
-    { label: 'Profile', path: '/profile', icon: User },
-  ];
-
-  if (user && user.role === 'admin') {
-    // Insert Admin Dashboard at the beginning for admin accounts
-    navItems.splice(1, 0, { label: 'Admin Panel', path: '/admin', icon: ShieldCheck });
-  }
+  const navItems = user && user.role === 'admin'
+    ? [
+        { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+        { label: 'Admin Panel', path: '/admin', icon: ShieldCheck },
+      ]
+    : [
+        { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+        { label: 'Find a Ride', path: '/find-ride', icon: MapPin },
+        { label: 'Offer a Ride', path: '/offer-ride', icon: PlusCircle },
+        { label: 'My Trips', path: '/my-trips', icon: Clock },
+        { label: 'Wallet', path: '/wallet', icon: Wallet },
+        { label: 'Vehicles', path: '/vehicles', icon: Car },
+        { label: 'Profile', path: '/profile', icon: User },
+        { label: 'Settings', path: '/settings', icon: Settings },
+      ];
 
   const handleLogout = () => {
     logout();
@@ -113,11 +158,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               {user.first_name[0] || user.username[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate leading-none mb-1">
+              <p className="text-sm font-semibold truncate leading-none">
                 {user.first_name} {user.last_name}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user.organization_details?.name || 'Acme Corp'}
               </p>
             </div>
           </div>
@@ -171,7 +213,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       {/* MAIN CONTAINER */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* HEADER BAR */}
-        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md px-6 flex items-center justify-between flex-shrink-0">
+        <header className="relative z-30 h-16 border-b border-border bg-card/80 backdrop-blur-md px-6 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -201,7 +243,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
               {/* Notification Popup Modal */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-card border border-border shadow-xl rounded-xl z-50 overflow-hidden flex flex-col max-h-96">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 bg-card border border-border shadow-xl rounded-xl z-50 overflow-hidden flex flex-col max-h-96">
                   <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/40">
                     <span className="font-bold text-sm">Notifications</span>
                     {unreadCount > 0 && (

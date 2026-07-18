@@ -69,11 +69,12 @@ class TripViewSet(viewsets.ModelViewSet):
         if trip.status not in ['started', 'in_progress']:
             return Response({"error": f"Cannot end trip from status: {trip.status}"}, status=status.HTTP_400_BAD_REQUEST)
 
+        from decimal import Decimal
         with transaction.atomic():
             trip.status = 'completed'
             trip.ended_at = timezone.now()
             # Calculate distance (fallback to 12.5 km if not set)
-            distance = trip.distance_covered if trip.distance_covered > 0 else 12.5
+            distance = trip.distance_covered if trip.distance_covered > 0 else Decimal('12.5')
             trip.distance_covered = distance
             trip.save()
 
@@ -82,26 +83,49 @@ class TripViewSet(viewsets.ModelViewSet):
 
             # 1. Driver gets credited with earnings from all approved bookings
             bookings = Booking.objects.filter(ride=ride, status='approved')
-            total_driver_earnings = 0
+            total_driver_earnings = Decimal('0.00')
             
             for b in bookings:
-                fare = b.seats_booked * ride.fare_per_seat
-                total_driver_earnings += fare
+                fare = Decimal(str(b.seats_booked)) * Decimal(str(ride.fare_per_seat))
+                payment = Payment.objects.filter(booking=b).first()
+
+                if payment and payment.payment_status == 'pending':
+                    total_driver_earnings += fare
+
+                    # Deduct fare from passenger's wallet
+                    passenger_wallet, _ = Wallet.objects.get_or_create(user=b.passenger)
+                    passenger_wallet.balance -= fare
+                    passenger_wallet.save()
+
+                    # Create passenger wallet transaction log
+                    WalletTransaction.objects.create(
+                        wallet=passenger_wallet,
+                        amount=-fare,
+                        transaction_type='ride_payment',
+                        reference_id=f"BOOK-{b.id}"
+                    )
+
+                    # Transition Payment record from pending to completed
+                    payment.payment_status = 'completed'
+                    payment.save()
+                else:
+                    # Passenger paid early, skip charging/crediting
+                    pass
 
                 # Increment passenger statistics
                 passenger = b.passenger
-                passenger.total_distance += distance
+                passenger.total_distance += Decimal(str(distance))
                 # CO2 saved math: ~0.15kg saved per km by pooling
-                passenger.co2_saved += distance * b.seats_booked * 0.15
+                passenger.co2_saved += Decimal(str(distance)) * Decimal(str(b.seats_booked)) * Decimal('0.15')
                 # Money saved math: taking private taxi is ~2.5x more expensive
-                passenger.money_saved += fare * 1.5
+                passenger.money_saved += fare * Decimal('1.5')
                 passenger.save()
 
                 # Notify passenger
                 Notification.objects.create(
                     recipient=passenger,
-                    title="Trip Completed!",
-                    message=f"Your ride from {ride.pickup_location} has completed. Thank you for carpooling!",
+                    title="Trip Completed & Wallet Charged!",
+                    message=f"Your ride from {ride.pickup_location} has completed. Fare of {fare} has been charged to your wallet.",
                     notification_type="ride_completed"
                 )
 
@@ -120,8 +144,8 @@ class TripViewSet(viewsets.ModelViewSet):
 
             # Increment driver statistics
             driver = ride.driver
-            driver.total_distance += distance
-            driver.co2_saved += distance * 0.15 * len(bookings)
+            driver.total_distance += Decimal(str(distance))
+            driver.co2_saved += Decimal(str(distance)) * Decimal('0.15') * Decimal(str(len(bookings)))
             driver.money_saved += total_driver_earnings # Driver earns money they otherwise wouldn't have
             driver.save()
 

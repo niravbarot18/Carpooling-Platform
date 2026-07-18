@@ -43,7 +43,7 @@ export const Landing: React.FC = () => {
         </h1>
 
         <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mt-6 leading-relaxed">
-          The secure carpooling platform built exclusively for corporate employees. Save commute costs, share routes safely, and help build a greener future.
+          The secure carpooling platform. Save commute costs, share routes safely, and help build a greener future.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mt-10">
@@ -66,12 +66,12 @@ export const Landing: React.FC = () => {
             <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold tracking-wider">CO₂ Offset</p>
           </div>
           <div>
-            <p className="text-3xl sm:text-4xl font-extrabold text-primary">$48,000+</p>
+            <p className="text-3xl sm:text-4xl font-extrabold text-primary">₹48,000+</p>
             <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold tracking-wider">Commute Fuel Saved</p>
           </div>
           <div>
             <p className="text-3xl sm:text-4xl font-extrabold text-primary">99.9%</p>
-            <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold tracking-wider">Domain Verified Staff</p>
+            <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold tracking-wider">Verified Users</p>
           </div>
         </div>
       </section>
@@ -91,9 +91,9 @@ export const Landing: React.FC = () => {
               <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-6">
                 <Shield size={24} />
               </div>
-              <h3 className="font-bold text-lg">Secure Staff Verification</h3>
+              <h3 className="font-bold text-lg">Secure User Verification</h3>
               <p className="text-muted-foreground text-sm mt-3 leading-relaxed">
-                Automatic employee linking via company email domains. Only approved personnel from your organization can match, offer, or accept bookings.
+                Automatic user verification checks. Only approved accounts can match, offer, or accept bookings.
               </p>
             </div>
 
@@ -162,9 +162,9 @@ export const Landing: React.FC = () => {
             <span className="h-12 w-12 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-lg mb-4">
               1
             </span>
-            <h4 className="font-bold text-base">Register with Work Email</h4>
+            <h4 className="font-bold text-base">Register an Account</h4>
             <p className="text-muted-foreground text-xs mt-2 leading-relaxed">
-              Signup and select your organization. Domain matching automatically registers you under your corporate workspace.
+              Signup and create an account. Fill in your details to get registered under our carpooling platform.
             </p>
           </div>
 
@@ -202,7 +202,7 @@ export const Landing: React.FC = () => {
 
       {/* FOOTER */}
       <footer className="mt-auto border-t border-border bg-card py-12 px-6 sm:px-12 text-center text-muted-foreground text-xs">
-        <p>© 2026 CarpoolOrg Inc. Built for Corporate Environmental Responsibility and Commuter Comfort.</p>
+        <p>© 2026 CarpoolOrg Inc. Built for Environmental Responsibility and Commuter Comfort.</p>
         <p className="mt-2 text-muted-foreground/60">Vite • React • Django REST Framework • WebSockets • OpenStreetMap</p>
       </footer>
     </div>

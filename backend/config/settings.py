@@ -2,17 +2,14 @@ import os
 from pathlib import Path
 from datetime import timedelta
 import dj_database_url
-from dotenv import load_dotenv
-
-# Load env variables from .env file
-load_dotenv()
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-87jw%6$dzoz2cx8@v3#djb#fj3_54i0b9&b)69o&xk+)v9sj#+")
-DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-87jw%6$dzoz2cx8@v3#djb#fj3_54i0b9&b)69o&xk+)v9sj#+")
+DEBUG = config("DEBUG", default="True", cast=bool)
 
 ALLOWED_HOSTS = ["*"]
 
@@ -64,7 +61,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -81,7 +78,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # Database setup (Neon PostgreSQL in production, SQLite fallback in local)
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = config("DATABASE_URL", default="")
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
@@ -148,3 +145,21 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
+
+# Email Configuration (SMTP Backend with Console Fallback using decouple)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+if EMAIL_HOST_USER:
+    EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+    EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+    EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+    EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+    EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+    DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = "noreply@carpool.org"
+
+# Razorpay Credentials
+RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
+RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
+

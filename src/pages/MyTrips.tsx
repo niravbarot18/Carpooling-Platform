@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Check, X, Navigation, AlertCircle } from 'lucide-react';
@@ -11,6 +11,7 @@ interface Booking {
   passenger_details: { username: string; phone_number: string };
   pickup_location: string;
   destination_location: string;
+  payment_status?: string;
 }
 
 interface Ride {
@@ -33,6 +34,7 @@ interface PassengerBooking {
   status: string;
   pickup_location: string;
   destination_location: string;
+  payment_status?: string;
   ride_details: {
     id: number;
     pickup_location: string;
@@ -49,12 +51,23 @@ interface PassengerBooking {
 
 export const MyTrips: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'passenger' | 'driver'>('passenger');
+  const [activeTab, setActiveTab] = useState<'passenger' | 'driver' | 'history'>('passenger');
   const [offeredRides, setOfferedRides] = useState<Ride[]>([]);
   const [passengerBookings, setPassengerBookings] = useState<PassengerBooking[]>([]);
+  
+  const [historyRides, setHistoryRides] = useState<Ride[]>([]);
+  const [historyBookings, setHistoryBookings] = useState<PassengerBooking[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state && (location.state as any).tab) {
+      setActiveTab((location.state as any).tab);
+    }
+  }, [location.state]);
 
   const loadTrips = async () => {
     setLoading(true);
@@ -62,20 +75,51 @@ export const MyTrips: React.FC = () => {
     try {
       if (activeTab === 'driver') {
         const res = await api.get('/rides/', { params: { driver_id: user?.id } });
-        // Embed bookings for each ride by hitting booking list
         const ridesList = res.data.results || res.data;
         const bookingsRes = await api.get('/book/', { params: { role_type: 'driver' } });
         const allDriverBookings = bookingsRes.data.results || bookingsRes.data;
 
-        // Group bookings under rides
-        const populatedRides = ridesList.map((ride: Ride) => ({
-          ...ride,
-          bookings: allDriverBookings.filter((b: any) => b.ride === ride.id)
-        }));
-        setOfferedRides(populatedRides);
-      } else {
+        // Group and filter for active offered rides
+        const activeOfferedRides = ridesList
+          .filter((r: Ride) => r.status !== 'completed' && r.status !== 'cancelled')
+          .map((ride: Ride) => ({
+            ...ride,
+            bookings: allDriverBookings.filter((b: any) => b.ride === ride.id)
+          }));
+        setOfferedRides(activeOfferedRides);
+      } else if (activeTab === 'passenger') {
         const res = await api.get('/book/', { params: { role_type: 'passenger' } });
-        setPassengerBookings(res.data.results || res.data);
+        const list = res.data.results || res.data;
+        
+        // Filter out completed/cancelled passenger bookings
+        const activePassengerBookings = list.filter(
+          (b: PassengerBooking) => b.ride_details.status !== 'completed' && b.ride_details.status !== 'cancelled'
+        );
+        setPassengerBookings(activePassengerBookings);
+      } else if (activeTab === 'history') {
+        const ridesRes = await api.get('/rides/', { params: { driver_id: user?.id } });
+        const bookingsRes = await api.get('/book/', { params: { role_type: 'passenger' } });
+        const allBookingsRes = await api.get('/book/', { params: { role_type: 'driver' } });
+
+        const ridesList = ridesRes.data.results || ridesRes.data;
+        const bookingsList = bookingsRes.data.results || bookingsRes.data;
+        const allDriverBookings = allBookingsRes.data.results || allBookingsRes.data;
+
+        // History as driver (completed/cancelled offered rides)
+        const completedRides = ridesList
+          .filter((r: Ride) => r.status === 'completed' || r.status === 'cancelled')
+          .map((ride: Ride) => ({
+            ...ride,
+            bookings: allDriverBookings.filter((b: any) => b.ride === ride.id)
+          }));
+
+        // History as passenger (completed/cancelled booked rides)
+        const completedBookings = bookingsList.filter(
+          (b: PassengerBooking) => b.ride_details.status === 'completed' || b.ride_details.status === 'cancelled'
+        );
+
+        setHistoryRides(completedRides);
+        setHistoryBookings(completedBookings);
       }
     } catch (err) {
       console.error(err);
@@ -116,6 +160,17 @@ export const MyTrips: React.FC = () => {
       loadTrips();
     } catch (err: any) {
       alert(err.response?.data?.error || "Failed to cancel booking.");
+    }
+  };
+
+  const handlePayBooking = async (bookingId: number) => {
+    if (!window.confirm("Do you want to pay for this booking now using your wallet balance?")) return;
+    try {
+      await api.post(`/book/${bookingId}/pay/`);
+      alert("Payment completed successfully!");
+      loadTrips();
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Failed to make early payment.");
     }
   };
 
@@ -168,6 +223,16 @@ export const MyTrips: React.FC = () => {
           >
             Offered Rides (Driver)
           </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'history'
+                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Ride History
+          </button>
         </div>
       </div>
 
@@ -200,6 +265,16 @@ export const MyTrips: React.FC = () => {
                       <div>
                         <span className="text-[10px] uppercase font-bold text-primary tracking-wider">Passenger Booking</span>
                         <h4 className="font-bold text-sm mt-1">{ride.pickup_location} → {ride.destination_location}</h4>
+                        {booking.payment_status && booking.payment_status !== 'no_payment' && (
+                          <span className={`inline-block text-[9px] font-extrabold uppercase px-2 py-0.5 mt-1.5 rounded-md ${
+                            booking.payment_status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
+                            booking.payment_status === 'pending' ? 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20' :
+                            booking.payment_status === 'refunded' ? 'bg-muted text-muted-foreground border border-border' :
+                            'bg-destructive/10 text-destructive border border-destructive/20'
+                          }`}>
+                            Payment: {booking.payment_status === 'pending' ? 'Pending Ride End' : booking.payment_status}
+                          </span>
+                        )}
                       </div>
                       <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full ${
                         booking.status === 'approved' ? 'bg-emerald-500/10 text-emerald-600' :
@@ -224,7 +299,7 @@ export const MyTrips: React.FC = () => {
                       <div>
                         <p className="text-muted-foreground font-semibold">Total Price</p>
                         <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                          ${(booking.seats_booked * parseFloat(ride.fare_per_seat)).toFixed(2)}
+                          ₹{(booking.seats_booked * parseFloat(ride.fare_per_seat)).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -238,22 +313,33 @@ export const MyTrips: React.FC = () => {
 
                   {/* Actions */}
                   <div className="pt-4 mt-4 border-t border-border flex justify-between items-center">
-                    {booking.status === 'approved' && ride.status !== 'completed' && (
-                      <button
-                        onClick={() => navigate(`/tracking/${booking.id}`)} // Redirect to live view
-                        className="flex items-center space-x-1.5 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 font-semibold rounded-xl text-xs shadow-md transition-all"
-                      >
-                        <Navigation size={12} />
-                        <span>Track Live Journey</span>
-                      </button>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {booking.status === 'approved' && ride.status !== 'completed' && (
+                        <button
+                          onClick={() => navigate(`/tracking/${booking.id}`)} // Redirect to live view
+                          className="flex items-center space-x-1.5 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 font-semibold rounded-xl text-xs shadow-md transition-all outline-none"
+                        >
+                          <Navigation size={12} />
+                          <span>Track Live Journey</span>
+                        </button>
+                      )}
+                      
+                      {booking.status === 'approved' && booking.payment_status === 'pending' && (
+                        <button
+                          onClick={() => handlePayBooking(booking.id)}
+                          className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-md transition-all outline-none"
+                        >
+                          <span>Pay Now (₹{(booking.seats_booked * parseFloat(ride.fare_per_seat)).toFixed(2)})</span>
+                        </button>
+                      )}
+                    </div>
                     
-                    {booking.status === 'pending' && (
+                    {(booking.status === 'pending' || (booking.status === 'approved' && booking.payment_status === 'pending')) && (
                       <button
                         onClick={() => handleCancelBooking(booking.id)}
-                        className="text-xs text-destructive hover:underline font-semibold"
+                        className="text-xs text-destructive hover:underline font-semibold outline-none"
                       >
-                        Cancel Booking Request
+                        Cancel Booking
                       </button>
                     )}
                   </div>
@@ -262,11 +348,11 @@ export const MyTrips: React.FC = () => {
             })}
           </div>
         )
-      ) : (
+      ) : activeTab === 'driver' ? (
         // DRIVER VIEW
         offeredRides.length === 0 ? (
           <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm">
-            You haven't offered any driving commutes. Set up your route in Offer a Ride!
+            You haven't offered any active driving commutes. Set up your route in Offer a Ride!
           </div>
         ) : (
           <div className="space-y-8">
@@ -357,6 +443,134 @@ export const MyTrips: React.FC = () => {
 
               </div>
             ))}
+          </div>
+        )
+      ) : (
+        // RIDE HISTORY VIEW (ENDED TRIPS)
+        historyRides.length === 0 && historyBookings.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm max-w-xl mx-auto">
+            You don't have any past / ended trips in your history yet.
+          </div>
+        ) : (
+          <div className="space-y-8 animate-fade-in">
+            {/* History as Driver */}
+            {historyRides.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Offered Rides History (As Driver)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {historyRides.map((ride) => (
+                    <div key={ride.id} className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between hover-glow opacity-85">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold text-indigo-500 tracking-wider">Driver Role</span>
+                            <h4 className="font-bold text-sm mt-1">{ride.pickup_location} → {ride.destination_location}</h4>
+                          </div>
+                          <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full ${
+                            ride.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'
+                          }`}>
+                            {ride.status}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 border-y border-border py-3 text-xs">
+                          <div>
+                            <p className="text-muted-foreground font-semibold">Date & Time</p>
+                            <p className="font-bold text-foreground mt-0.5">{ride.travel_date} • {ride.travel_time.slice(0, 5)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground font-semibold">Vehicle</p>
+                            <p className="font-bold text-foreground mt-0.5">{ride.vehicle_details.name} ({ride.vehicle_details.registration_number})</p>
+                          </div>
+                        </div>
+
+                        {/* Participants / Passengers */}
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Ride Participants (Passengers)</p>
+                          {ride.bookings.filter((b: any) => b.status === 'approved').length === 0 ? (
+                            <p className="text-xs text-muted-foreground italic">No passengers joined this ride.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {ride.bookings
+                                .filter((b: any) => b.status === 'approved')
+                                .map((b: any) => (
+                                  <span key={b.id} className="px-2 py-0.5 bg-muted border border-border rounded-md text-xs font-medium text-foreground">
+                                    {b.passenger_details.username} ({b.seats_booked} seat{b.seats_booked > 1 ? 's' : ''})
+                                  </span>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* History as Passenger */}
+            {historyBookings.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Booked Rides History (As Passenger)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {historyBookings.map((booking) => {
+                    const ride = booking.ride_details;
+                    return (
+                      <div key={booking.id} className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between hover-glow opacity-85">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <span className="text-[9px] uppercase font-bold text-emerald-500 tracking-wider">Passenger Role</span>
+                              <h4 className="font-bold text-sm mt-1">{ride.pickup_location} → {ride.destination_location}</h4>
+                              {booking.payment_status && booking.payment_status !== 'no_payment' && (
+                                <span className={`inline-block text-[9px] font-extrabold uppercase px-2 py-0.5 mt-1.5 rounded-md ${
+                                  booking.payment_status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
+                                  booking.payment_status === 'pending' ? 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20' :
+                                  booking.payment_status === 'refunded' ? 'bg-muted text-muted-foreground border border-border' :
+                                  'bg-destructive/10 text-destructive border border-destructive/20'
+                                }`}>
+                                  Payment: {booking.payment_status}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end space-y-1">
+                              <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full ${
+                                ride.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'
+                              }`}>
+                                Ride: {ride.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 border-y border-border py-3 text-center text-xs">
+                            <div>
+                              <p className="text-muted-foreground font-semibold">Driver</p>
+                              <p className="font-bold text-foreground mt-0.5">{ride.driver_details.username}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-semibold">Seats Booked</p>
+                              <p className="font-bold text-foreground mt-0.5">{booking.seats_booked}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground font-semibold">Total Cost</p>
+                              <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                ₹{(booking.seats_booked * parseFloat(ride.fare_per_seat)).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            <p>Date & Time: <span className="font-semibold text-foreground">{ride.travel_date} • {ride.travel_time.slice(0, 5)}</span></p>
+                            <p>Vehicle: <span className="font-semibold text-foreground">{ride.vehicle_details.name} ({ride.vehicle_details.registration_number})</span></p>
+                            <p>Booking Status: <span className="font-bold text-foreground capitalize">{booking.status}</span></p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )
       )}
