@@ -30,7 +30,7 @@ api.interceptors.response.use(
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      
+
       // If we are not on login page, redirect to login
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';

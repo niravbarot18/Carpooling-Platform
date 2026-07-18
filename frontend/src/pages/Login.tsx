@@ -63,10 +63,10 @@ export const Login: React.FC = () => {
   };
 
   const features = [
-    { icon: Car,        label: 'Smart Ride Matching',    desc: 'AI-powered route overlap detection' },
-    { icon: Leaf,       label: 'Carbon Tracking',        desc: 'Real-time CO₂ savings per trip' },
-    { icon: TrendingDown, label: 'Cost Reduction',       desc: 'Save up to 60% on daily commutes' },
-    { icon: Users,      label: 'Team Carpooling',        desc: 'Connect with colleagues nearby' },
+    { icon: Car, label: 'Smart Ride Matching', desc: 'AI-powered route overlap detection' },
+    { icon: Leaf, label: 'Carbon Tracking', desc: 'Real-time CO₂ savings per trip' },
+    { icon: TrendingDown, label: 'Cost Reduction', desc: 'Save up to 60% on daily commutes' },
+    { icon: Users, label: 'Team Carpooling', desc: 'Connect with colleagues nearby' },
   ];
 
   return (
@@ -253,7 +253,7 @@ export const Login: React.FC = () => {
                     value={department} onChange={e => setDepartment(e.target.value)}
                     style={{ ...inputStyle, cursor: 'pointer' }}
                   >
-                    {['Engineering','Product','Sales','Marketing','Operations','Finance','HR'].map(d => (
+                    {['Engineering', 'Product', 'Sales', 'Marketing', 'Operations', 'Finance', 'HR'].map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>

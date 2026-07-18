@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -113,7 +114,13 @@ export const FindRide: React.FC = () => {
       params.start_lng = s_lng;
       params.end_lat = e_lat;
       params.end_lng = e_lng;
-      if (d_time) params.departure_time = d_time;
+      if (d_time) {
+        try {
+          params.departure_time = new Date(d_time).toISOString();
+        } catch (e) {
+          params.departure_time = d_time;
+        }
+      }
     }
 
     try {
@@ -216,7 +223,8 @@ export const FindRide: React.FC = () => {
                 <select
                   value={fromLoc}
                   onChange={(e) => setFromLoc(e.target.value)}
-                  className="premium-input text-xs pl-10"
+                  className="premium-input text-xs"
+                  style={{ paddingLeft: '2.5rem' }}
                 >
                   <option value="">Select pickup point...</option>
                   {POPULAR_LOCATIONS.map(l => (
@@ -230,7 +238,8 @@ export const FindRide: React.FC = () => {
                 <select
                   value={toLoc}
                   onChange={(e) => setToLoc(e.target.value)}
-                  className="premium-input text-xs pl-10"
+                  className="premium-input text-xs"
+                  style={{ paddingLeft: '2.5rem' }}
                 >
                   <option value="">Select drop-off point...</option>
                   {POPULAR_LOCATIONS.map(l => (
@@ -245,7 +254,8 @@ export const FindRide: React.FC = () => {
                   type="datetime-local"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="premium-input text-xs pl-10"
+                  className="premium-input text-xs"
+                  style={{ paddingLeft: '2.5rem' }}
                 />
               </div>
             </div>
@@ -359,12 +369,18 @@ export const FindRide: React.FC = () => {
                       <p className="text-base font-bold text-gray-800">₹{parseFloat(ride.price_per_seat).toFixed(0)}</p>
                     </div>
 
-                    <button
-                      onClick={() => openBookingModal(ride)}
-                      className="premium-btn-primary h-10 px-6 text-xs font-semibold shadow-sm cursor-pointer"
-                    >
-                      Book Ride
-                    </button>
+                    {ride.driver.id === user?.id ? (
+                      <span className="text-xs bg-gray-100 text-gray-400 font-semibold px-4 py-2 rounded-xl border border-gray-200">
+                        Your Offer
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => openBookingModal(ride)}
+                        className="premium-btn-primary h-10 px-6 text-xs font-semibold shadow-sm cursor-pointer"
+                      >
+                        Book Ride
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -430,57 +446,99 @@ export const FindRide: React.FC = () => {
       </div>
 
       {/* Booking confirmation modal */}
-      {selectedRide && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-gray-100 rounded-3xl max-w-md w-full shadow-2xl p-6 relative">
+      {selectedRide && ReactDOM.createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            zIndex: 99999,
+            boxSizing: 'border-box',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedRide(null); }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #f3f4f6',
+              borderRadius: '1.5rem',
+              width: '100%',
+              maxWidth: '28rem',
+              minWidth: '320px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              padding: '1.5rem',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxSizing: 'border-box',
+            }}
+          >
             <button 
               onClick={() => setSelectedRide(null)}
-              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg"
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '1rem',
+                color: '#9ca3af',
+                padding: '0.375rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+              }}
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-base font-bold text-gray-800 mb-2">Book Commute Seat</h3>
-            <p className="text-xs text-gray-400 mb-6">
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937', marginBottom: '0.5rem' }}>Book Commute Seat</h3>
+            <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
               Confirm your seats on {selectedRide.driver.first_name || selectedRide.driver.email}'s vehicle.
             </p>
 
             {/* Error alerts */}
             {bookingError && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-2.5 text-red-700 text-xs leading-normal">
-                <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.625rem', color: '#b91c1c', fontSize: '0.75rem', lineHeight: '1.5' }}>
+                <X style={{ width: '1rem', height: '1rem', color: '#ef4444', flexShrink: 0, marginTop: '0.125rem' }} />
                 <span>{bookingError}</span>
               </div>
             )}
 
             {/* Success alerts */}
             {bookingSuccess && (
-              <div className="mb-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-start gap-2.5 text-emerald-700 text-xs leading-normal">
-                <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#ecfdf5', border: '1px solid #d1fae5', borderRadius: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.625rem', color: '#047857', fontSize: '0.75rem', lineHeight: '1.5' }}>
+                <ShieldCheck style={{ width: '1rem', height: '1rem', color: '#10b981', flexShrink: 0, marginTop: '0.125rem' }} />
                 <span>{bookingSuccess}</span>
               </div>
             )}
 
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Seat Selector */}
-              <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '1rem', border: '1px solid #f3f4f6' }}>
                 <div>
-                  <p className="text-xs font-semibold text-gray-700">Seating Seats</p>
-                  <p className="text-[10px] text-gray-400">Available: {selectedRide.available_seats}</p>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151', margin: 0 }}>Seating Seats</p>
+                  <p style={{ fontSize: '10px', color: '#9ca3af', margin: 0 }}>Available: {selectedRide.available_seats}</p>
                 </div>
-                <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-2 py-1">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#fff', border: '1px solid #f3f4f6', borderRadius: '0.75rem', padding: '0.25rem 0.5rem' }}>
                   <button 
                     disabled={seatsToBook <= 1}
                     onClick={() => setSeatsToBook(s => s - 1)}
-                    className="w-8 h-8 rounded-lg hover:bg-gray-50 flex items-center justify-center font-bold text-gray-600 disabled:opacity-50 cursor-pointer"
+                    style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#4b5563', border: 'none', background: 'none', cursor: 'pointer', opacity: seatsToBook <= 1 ? 0.5 : 1 }}
                   >
                     -
                   </button>
-                  <span className="font-bold text-sm text-gray-800 w-4 text-center">{seatsToBook}</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#1f2937', width: '1rem', textAlign: 'center' }}>{seatsToBook}</span>
                   <button 
                     disabled={seatsToBook >= selectedRide.available_seats}
                     onClick={() => setSeatsToBook(s => s + 1)}
-                    className="w-8 h-8 rounded-lg hover:bg-gray-50 flex items-center justify-center font-bold text-gray-600 disabled:opacity-50 cursor-pointer"
+                    style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#4b5563', border: 'none', background: 'none', cursor: 'pointer', opacity: seatsToBook >= selectedRide.available_seats ? 0.5 : 1 }}
                   >
                     +
                   </button>
@@ -488,45 +546,47 @@ export const FindRide: React.FC = () => {
               </div>
 
               {/* Price Breakdown */}
-              <div className="space-y-2 border-t border-gray-50 pt-4 text-xs font-medium text-gray-600">
-                <div className="flex justify-between">
+              <div style={{ borderTop: '1px solid #f9fafb', paddingTop: '1rem', fontSize: '0.75rem', fontWeight: 500, color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Fare ({seatsToBook} seat{seatsToBook > 1 ? 's' : ''})</span>
-                  <span>₹{(selectedRide.price_per_seat * seatsToBook).toFixed(2)}</span>
+                  <span style={{ whiteSpace: 'nowrap' }}>₹{(selectedRide.price_per_seat * seatsToBook).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-[10px] text-emerald-600">
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#059669' }}>
                   <span>Simulated Carbon Credit Discount (10%)</span>
-                  <span>- ₹{(selectedRide.price_per_seat * seatsToBook * 0.1).toFixed(2)}</span>
+                  <span style={{ whiteSpace: 'nowrap' }}>- ₹{(selectedRide.price_per_seat * seatsToBook * 0.1).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between border-t border-gray-50 pt-3 text-sm font-bold text-gray-800">
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f9fafb', paddingTop: '0.75rem', fontSize: '0.875rem', fontWeight: 700, color: '#1f2937' }}>
                   <span>Total Debit Amount</span>
-                  <span>₹{(selectedRide.price_per_seat * seatsToBook * 0.9).toFixed(2)}</span>
+                  <span style={{ whiteSpace: 'nowrap' }}>₹{(selectedRide.price_per_seat * seatsToBook * 0.9).toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Wallet Info Check */}
-              <div className="text-[10px] text-gray-400 flex items-center gap-1.5 mt-2 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                <Users className="w-3.5 h-3.5 text-gray-400" />
+              <div style={{ fontSize: '10px', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '0.375rem', backgroundColor: '#f9fafb', padding: '0.625rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' }}>
+                <Users style={{ width: '0.875rem', height: '0.875rem', color: '#9ca3af', flexShrink: 0 }} />
                 <span>Your wallet balance: ₹{parseFloat(user?.wallet_balance?.toString() || '0').toFixed(2)}</span>
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex gap-4 border-t border-gray-50 pt-4 mt-6">
+              <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid #f9fafb', paddingTop: '1rem', marginTop: '0.5rem' }}>
                 <button
                   onClick={() => setSelectedRide(null)}
-                  className="flex-1 premium-btn-secondary text-xs"
+                  className="premium-btn-secondary"
+                  style={{ flex: 1, fontSize: '0.75rem', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
                 <button
                   disabled={bookingLoading || !!bookingSuccess}
                   onClick={handleConfirmBooking}
-                  className="flex-1 premium-btn-primary text-xs font-semibold gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer disabled:opacity-50"
+                  className="premium-btn-primary"
+                  style={{ flex: 1, fontSize: '0.75rem', fontWeight: 600, gap: '0.375rem', cursor: 'pointer', opacity: (bookingLoading || !!bookingSuccess) ? 0.5 : 1 }}
                 >
                   {bookingLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div style={{ width: '1rem', height: '1rem', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
                   ) : (
                     <>
-                      <ShieldCheck className="w-4 h-4" />
+                      <ShieldCheck style={{ width: '1rem', height: '1rem' }} />
                       <span>Request Booking</span>
                     </>
                   )}
@@ -534,7 +594,8 @@ export const FindRide: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

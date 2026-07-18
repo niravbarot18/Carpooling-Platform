@@ -30,7 +30,7 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/find-ride" element={
             <ProtectedRoute>
               <Layout>

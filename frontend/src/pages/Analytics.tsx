@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { 
-  BarChart3, Globe, ShieldAlert, Award, TrendingUp, 
-  ChevronRight, MapPin, Navigation, Info 
+import {
+  BarChart3, Globe, ShieldAlert, Award, TrendingUp,
+  ChevronRight, MapPin, Navigation, Info
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -90,7 +90,7 @@ export const Analytics: React.FC = () => {
 
       {/* Recharts Diagrams Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
+
         {/* Weekly Trend Line Chart */}
         <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-gray-50 pb-3">
@@ -147,7 +147,7 @@ export const Analytics: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            
+
             {/* Pie Legend panel */}
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[10px] font-medium text-gray-500">
               {department_usage.map((entry: any, index: number) => (
@@ -165,7 +165,7 @@ export const Analytics: React.FC = () => {
       {/* Popular Commute Routes */}
       <div className="space-y-4">
         <h3 className="text-sm font-bold text-gray-800">Popular Commuting Corridors</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {popular_routes.map((route: any, idx: number) => (
             <div key={idx} className="premium-card p-5 bg-white border border-gray-100 flex flex-col justify-between min-h-[140px]">
@@ -174,9 +174,9 @@ export const Analytics: React.FC = () => {
                   <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
                     {route.match} Match
                   </span>
-                  <span className="text-[10px] text-gray-400 font-medium">#{idx+1} route</span>
+                  <span className="text-[10px] text-gray-400 font-medium">#{idx + 1} route</span>
                 </div>
-                
+
                 <div className="space-y-1 pl-2 border-l border-gray-100">
                   <p className="text-[11px] font-semibold text-gray-700 truncate">{route.from}</p>
                   <p className="text-[11px] font-semibold text-gray-700 truncate">{route.to}</p>

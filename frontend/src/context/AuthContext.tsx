@@ -73,11 +73,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.post('auth/login/', { email, password });
       const { access, refresh, user: profile } = response.data;
-      
+
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
       localStorage.setItem('user', JSON.stringify(profile));
-      
+
       setUser(profile);
       return response.data;
     } catch (error) {

@@ -146,7 +146,7 @@ export const OfferRide: React.FC = () => {
         end_lat: destCoord?.[0],
         end_lng: destCoord?.[1],
         route_polyline: routePath,
-        departure_time: date,
+        departure_time: date ? new Date(date).toISOString() : date,
         total_seats: seats,
         price_per_seat: price,
         estimated_distance: distance,

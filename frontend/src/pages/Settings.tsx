@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, CheckCircle, ShieldAlert, Award, 
-  ToggleLeft, ToggleRight, Save, Info, AlertCircle 
+import {
+  User, CheckCircle, ShieldAlert, Award,
+  ToggleLeft, ToggleRight, Save, Info, AlertCircle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -173,7 +173,7 @@ export const Settings: React.FC = () => {
           {/* Notification Alerts */}
           <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm space-y-4">
             <h3 className="text-xs font-bold text-gray-800">Alert Communications</h3>
-            
+
             <div className="space-y-4 text-xs font-medium text-gray-600">
               <div className="flex items-center justify-between">
                 <div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { 
-  Home, Search, PlusCircle, Calendar, Car, Wallet, BarChart3, Settings, 
-  User, Bell, LogOut, Shield, CheckCircle, Clock, X, ChevronRight 
+import {
+  Home, Search, PlusCircle, Calendar, Car, Wallet, BarChart3, Settings,
+  User, Bell, LogOut, Shield, CheckCircle, Clock, X, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../hooks/useSocket';
@@ -96,11 +96,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <button
                   key={item.name}
                   onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
-                    isActive 
-                      ? 'bg-emerald-50 text-emerald-700' 
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${isActive
+                      ? 'bg-emerald-50 text-emerald-700'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-600' : 'text-gray-400'}`} />
                   {item.name}
@@ -126,7 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </p>
               <p className="text-[10px] text-gray-400 truncate">{user?.department}</p>
             </div>
-            <button 
+            <button
               onClick={logout}
               className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
               title="Logout"
@@ -144,8 +143,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Search bar */}
           <div className="w-96 relative">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search trips, locations..."
               className="w-full h-10 bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 text-sm outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50/20 transition-all"
             />
@@ -161,7 +160,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* Notifications Button */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="w-10 h-10 border border-gray-100 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-50 relative transition-all"
               >
@@ -179,7 +178,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <div className="flex items-center justify-between px-4 py-2 border-b border-gray-50">
                     <span className="font-semibold text-xs text-gray-800">Notifications</span>
                     {unreadCount > 0 && (
-                      <button 
+                      <button
                         onClick={markAllAsRead}
                         className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium"
                       >
@@ -194,11 +193,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </div>
                     ) : (
                       notifications.map((n) => (
-                        <div 
-                          key={n.id} 
-                          className={`px-4 py-3 flex gap-3 hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0 ${
-                            !n.is_read ? 'bg-emerald-50/20' : ''
-                          }`}
+                        <div
+                          key={n.id}
+                          className={`px-4 py-3 flex gap-3 hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0 ${!n.is_read ? 'bg-emerald-50/20' : ''
+                            }`}
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] font-semibold text-gray-800">{n.title}</p>

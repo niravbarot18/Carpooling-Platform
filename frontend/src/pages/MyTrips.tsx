@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Calendar, Car, MapPin, Navigation, Clock, Users, 
-  CheckCircle, AlertCircle, Play, CheckSquare, XCircle, ArrowRight 
+import {
+  Calendar, Car, MapPin, Navigation, Clock, Users,
+  CheckCircle, AlertCircle, Play, CheckSquare, XCircle, ArrowRight
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 export const MyTrips: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshProfile } = useAuth();
-  
+
   const [activeTab, setActiveTab] = useState<'passenger' | 'driver'>('passenger');
   const [bookings, setBookings] = useState<any[]>([]);
   const [driverRides, setDriverRides] = useState<any[]>([]);
@@ -140,21 +140,19 @@ export const MyTrips: React.FC = () => {
         <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-100 self-start">
           <button
             onClick={() => setActiveTab('passenger')}
-            className={`px-5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'passenger' 
-                ? 'bg-white text-gray-800 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`px-5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${activeTab === 'passenger'
+              ? 'bg-white text-gray-800 shadow-sm'
+              : 'text-gray-500 hover:text-gray-800'
+              }`}
           >
             Passenger Bookings
           </button>
           <button
             onClick={() => setActiveTab('driver')}
-            className={`px-5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'driver' 
-                ? 'bg-white text-gray-800 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`px-5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${activeTab === 'driver'
+              ? 'bg-white text-gray-800 shadow-sm'
+              : 'text-gray-500 hover:text-gray-800'
+              }`}
           >
             Driver Ride Offers
           </button>
@@ -194,7 +192,7 @@ export const MyTrips: React.FC = () => {
               const ride = booking.ride_details;
               const isFuture = new Date(ride.departure_time) >= new Date();
               const tripId = ride.trip?.id;
-              
+
               return (
                 <div key={booking.id} className="premium-card p-6 bg-white border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   {/* Left Column: Route Details */}
@@ -239,7 +237,7 @@ export const MyTrips: React.FC = () => {
                   <div className="md:w-48 text-xs text-gray-500 border-t md:border-t-0 md:border-l border-gray-50 pt-4 md:pt-0 md:pl-6">
                     <p className="text-[9px] text-gray-400">DRIVER</p>
                     <p className="font-semibold text-gray-700 mt-0.5">{ride.driver.first_name || ride.driver.username}</p>
-                    
+
                     <p className="text-[9px] text-gray-400 mt-3">VEHICLE</p>
                     <p className="font-semibold text-gray-700 mt-0.5">{ride.vehicle?.name} ({ride.vehicle?.registration_number})</p>
                   </div>
@@ -289,7 +287,7 @@ export const MyTrips: React.FC = () => {
               const hasBookings = ride.bookings && ride.bookings.length > 0;
               const pendingBookings = ride.bookings?.filter((b: any) => b.status === 'Pending') || [];
               const approvedBookings = ride.bookings?.filter((b: any) => b.status === 'Approved') || [];
-              
+
               return (
                 <div key={ride.id} className="premium-card bg-white border border-gray-100 overflow-hidden">
                   <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -335,7 +333,7 @@ export const MyTrips: React.FC = () => {
                     <div className="md:w-36 text-xs text-gray-500 border-t md:border-t-0 md:border-l border-gray-50 pt-4 md:pt-0 md:pl-6">
                       <p className="text-[9px] text-gray-400 font-semibold">FARE PER SEAT</p>
                       <p className="text-base font-bold text-gray-800 mt-0.5">₹{parseFloat(ride.price_per_seat).toFixed(0)}</p>
-                      
+
                       <p className="text-[9px] text-gray-400 mt-2 font-semibold">EST. CO₂ SAVED</p>
                       <p className="text-xs font-bold text-emerald-600 mt-0.5">{ride.estimated_co2_saved} kg</p>
                     </div>
@@ -362,7 +360,7 @@ export const MyTrips: React.FC = () => {
                           >
                             <span>Share Location</span>
                           </button>
-                          
+
                           <button
                             disabled={actionLoading === `end_${ride.id}`}
                             onClick={() => handleEndTrip(ride.id, tripId)}
@@ -382,7 +380,7 @@ export const MyTrips: React.FC = () => {
                       <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                         Riders on this trip
                       </h4>
-                      
+
                       <div className="space-y-2">
                         {ride.bookings.map((booking: any) => (
                           <div key={booking.id} className="bg-white border border-gray-100 rounded-xl p-3 flex items-center justify-between gap-4">
@@ -404,7 +402,7 @@ export const MyTrips: React.FC = () => {
                               <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${getStatusColor(booking.status)}`}>
                                 {booking.status}
                               </span>
-                              
+
                               {booking.status === 'Pending' && (
                                 <div className="flex gap-2">
                                   <button
