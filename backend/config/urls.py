@@ -54,7 +54,7 @@ urlpatterns = [
     path("api/", include(router.urls)),
     
     # Token Authentication endpoints
-    path("api/register/", SignupView.as_view(), name="api_register"),
+    path("api/register/", RegisterView.as_view(), name="api_register"),
     path("api/verify-otp/", VerifyOTPView.as_view(), name="api_verify_otp"),
     path("api/resend-otp/", ResendOTPView.as_view(), name="api_resend_otp"),
     path("api/login/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),

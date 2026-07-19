@@ -93,7 +93,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-              
+
               {/* Protected user routes */}
               <Route
                 path="/find-ride"

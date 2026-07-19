@@ -32,4 +32,15 @@ class BookingSerializer(serializers.ModelSerializer):
         if ride.available_seats < seats:
             raise serializers.ValidationError(f"Only {ride.available_seats} seats are available.")
 
-        return super().create(validated_data)
+        booking = super().create(validated_data)
+
+        # Notify driver of new booking request
+        from apps.notifications.models import Notification
+        Notification.objects.create(
+            recipient=ride.driver,
+            title="New Ride Request!",
+            message=f"Passenger {booking.passenger.username} has requested {booking.seats_booked} seat(s) on your ride from {ride.pickup_location} to {ride.destination_location}.",
+            notification_type="booking_request"
+        )
+
+        return booking

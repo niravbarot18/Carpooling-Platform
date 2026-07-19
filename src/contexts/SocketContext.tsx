@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../services/api';
 interface SocketContextType {
   getChatSocket: (roomName: string) => WebSocket;
   getTripSocket: (tripId: number | string) => WebSocket;
+  getNotificationSocket: (userId: number | string) => WebSocket;
   closeSocket: (url: string) => void;
 }
 
@@ -53,6 +54,23 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return ws;
   };
 
+  const getNotificationSocket = (userId: number | string): WebSocket => {
+    const url = getWsUrl(`/ws/notifications/${userId}/`);
+
+    if (socketsRef.current[url] && socketsRef.current[url].readyState === WebSocket.OPEN) {
+      return socketsRef.current[url];
+    }
+
+    const ws = new WebSocket(url);
+    socketsRef.current[url] = ws;
+
+    ws.onclose = () => {
+      delete socketsRef.current[url];
+    };
+
+    return ws;
+  };
+
   const closeSocket = (url: string) => {
     if (socketsRef.current[url]) {
       socketsRef.current[url].close();
@@ -70,7 +88,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   return (
-    <SocketContext.Provider value={{ getChatSocket, getTripSocket, closeSocket }}>
+    <SocketContext.Provider value={{ getChatSocket, getTripSocket, getNotificationSocket, closeSocket }}>
       {children}
     </SocketContext.Provider>
   );

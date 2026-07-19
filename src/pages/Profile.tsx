@@ -49,6 +49,17 @@ export const Profile: React.FC = () => {
     loadSavedPlaces();
   }, []);
 
+  // Sync form inputs when user context loads
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.first_name || '');
+      setLastName(user.last_name || '');
+      setPhone(user.phone_number || '');
+      setEmergName(user.emergency_contact_name || '');
+      setEmergPhone(user.emergency_contact_phone || '');
+    }
+  }, [user]);
+
   useEffect(() => {
     if (location.state && (location.state as any).scroll === 'saved-places') {
       setTimeout(() => {
@@ -73,9 +84,16 @@ export const Profile: React.FC = () => {
       });
       setSuccess("Profile details updated successfully!");
       refreshProfile();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to update profile. Please try again.");
+      if (err.response?.data) {
+        const errorDetails = Object.entries(err.response.data)
+          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+          .join(' | ');
+        setError(errorDetails || "Failed to update profile.");
+      } else {
+        setError("Failed to update profile. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -95,15 +113,22 @@ export const Profile: React.FC = () => {
       await api.post('/saved-places/', {
         name: placeName,
         address: placeAddress,
-        latitude: lat,
-        longitude: lng
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lng)
       });
       setPlaceName('');
       setPlaceAddress('');
       loadSavedPlaces();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to add saved place.");
+      if (err.response?.data) {
+        const errorDetails = Object.entries(err.response.data)
+          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+          .join(' | ');
+        setError(errorDetails || "Failed to add saved place.");
+      } else {
+        setError("Failed to add saved place.");
+      }
     }
   };
 

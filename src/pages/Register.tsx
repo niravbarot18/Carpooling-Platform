@@ -39,10 +39,29 @@ export const Register: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       if (err.response?.data) {
-        const errorDetails = Object.entries(err.response.data)
-          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
-          .join(' | ');
-        setError(errorDetails || "Failed to create account. Please double-check details.");
+        const data = err.response.data;
+        if (data.errors && typeof data.errors === 'object') {
+          const details = Object.entries(data.errors)
+            .map(([field, msgs]) => {
+              const label = field.replace('_', ' ');
+              const messageText = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${label}: ${messageText}`;
+            })
+            .join(' | ');
+          setError(details || data.message || "Validation failed.");
+        } else if (typeof data === 'object') {
+          const errorDetails = Object.entries(data)
+            .map(([key, val]) => {
+              if (typeof val === 'object' && val !== null) {
+                return `${key}: ${JSON.stringify(val)}`;
+              }
+              return `${key}: ${Array.isArray(val) ? val.join(', ') : val}`;
+            })
+            .join(' | ');
+          setError(errorDetails || "Failed to create account. Please double-check details.");
+        } else {
+          setError(String(data));
+        }
       } else {
         setError("Network error. Please try again later.");
       }

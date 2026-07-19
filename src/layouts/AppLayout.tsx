@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSocket } from '../contexts/SocketContext';
 import api from '../services/api';
 import {
   LayoutDashboard,
@@ -34,6 +35,7 @@ interface Notification {
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { getNotificationSocket, closeSocket } = useSocket();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -94,10 +96,33 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
     if (user) {
       fetchNotifications(true);
-      // Poll notifications every 10 seconds for real-time feel
+      // Poll notifications every 10 seconds as a reliable background backup
       const timer = setInterval(() => fetchNotifications(false), 10000);
       return () => clearInterval(timer);
     }
+  }, [user]);
+
+  // Connect real-time WebSocket notifications stream
+  useEffect(() => {
+    if (!user) return;
+
+    const wsUrl = `/ws/notifications/${user.id}/`;
+    const socket = getNotificationSocket(user.id);
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'notification' && data.notification) {
+        const n = data.notification;
+        // Broadcast browser native notification push
+        showNativeNotification(n.title, n.message);
+        // Prepend new incoming notification to context lists instantly
+        setNotifications((prev) => [n, ...prev]);
+      }
+    };
+
+    return () => {
+      closeSocket(wsUrl);
+    };
   }, [user]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -299,7 +324,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                 className="flex items-center space-x-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
               >
                 <Wallet size={14} />
-                <span>${user.money_saved ? Number(user.money_saved).toFixed(2) : '0.00'} Saved</span>
+                <span>₹{user.money_saved ? Number(user.money_saved).toFixed(2) : '0.00'} Saved</span>
               </Link>
             )}
           </div>
